@@ -2736,11 +2736,17 @@ public class ProfileUtilities extends TranslatingUtilities {
     List<ElementDefinition> result = new ArrayList<ElementDefinition>();
     String[] p = path.split("\\.");
     for (int i = start; i <= end; i++) {
-      String statedPath = context.getElement().get(i).getPath();
-      String[] sp = statedPath.split("\\.");
-      boolean ok = sp.length == p.length;
-      for (int j = 0; j < p.length; j++) {
-        ok = ok && sp.length > j && (p[j].equals(sp[j]) || isSameBase(p[j], sp[j]));
+      ElementDefinition diffElement = context.getElement().get(i);
+      boolean ok;
+      if (!StringUtils.isBlank(diffElement.getBase().getPath())) {
+        ok = path.equals(diffElement.getBase().getPath());
+      } else {
+        String statedPath = diffElement.getPath();
+        String[] sp = statedPath.split("\\.");
+        ok = sp.length == p.length;
+        for (int j = 0; j < p.length; j++) {
+          ok = ok && sp.length > j && (p[j].equals(sp[j]) || isSameBase(p[j], sp[j]));
+        }
       }
 // don't need this debug check - everything is ok
 //      if (ok != (statedPath.equals(path) || (path.endsWith("[x]") && statedPath.length() > path.length() - 2 &&
@@ -2758,7 +2764,7 @@ public class ProfileUtilities extends TranslatingUtilities {
           messages.add(new ValidationMessage(Source.ProfileValidator, IssueType.VALUE, "StructureDefinition.differential.element["+Integer.toString(start)+"]", "Error: unknown element '"+context.getElement().get(start).getPath()+"' (or it is out of order) in profile '"+url+"' (looking for '"+path+"')", IssueSeverity.WARNING));
 
          */
-        result.add(context.getElement().get(i));
+        result.add(diffElement);
       }
     }
     return result;
@@ -2818,7 +2824,9 @@ public class ProfileUtilities extends TranslatingUtilities {
       ElementDefinition e = profile.getSnapshot().getElement().get(0);
       String webroot = profile.getUserString("webroot");
 
-      base.setDefinition(processRelativeUrls(e.getDefinition(), webroot, baseSpecUrl(), context.getResourceNames(), masterSourceFileNames, true));
+      if (e.hasDefinition()) {
+        base.setDefinition(processRelativeUrls(e.getDefinition(), webroot, baseSpecUrl(), context.getResourceNames(), masterSourceFileNames, true));
+      }
       base.setShort(e.getShort());
       if (e.hasCommentElement())
         base.setCommentElement(e.getCommentElement());
